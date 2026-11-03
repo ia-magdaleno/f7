@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Liga de Pago Segura — Magdaleno Maderas & Materiales</title>
+  <script src="/tailwindcss.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Montserrat', sans-serif; background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #064e3b 100%); }
+  </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4 text-slate-800">
+  <div class="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
+    <!-- Header -->
+    <div class="bg-gradient-to-r from-[#1e293b] to-[#0f172a] text-white p-5 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="bg-[#ff0303] text-white px-2.5 py-1.5 rounded-lg font-black text-center leading-none shadow">
+          <span class="text-xs block font-extrabold uppercase">Magdaleno</span>
+          <span class="text-[7px] font-bold opacity-90 block mt-0.5">MADERAS & MATERIALES</span>
+        </div>
+        <div>
+          <h1 class="text-sm font-black uppercase tracking-wide">Portal de Pago Seguro</h1>
+          <p class="text-[11px] text-emerald-400 font-semibold flex items-center gap-1">🔒 Conexión Bancaria Cifrada (SPEI / Tarjeta)</p>
+        </div>
+      </div>
+      <span id="pl-order-badge" class="bg-white/10 border border-white/20 text-white text-[10px] font-bold px-2.5 py-1 rounded-full">ORD-0000</span>
+    </div>
+
+    <div id="pl-active-content" class="p-6 space-y-5">
+      <!-- Monto e info del cliente -->
+      <div class="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-4 text-center space-y-1">
+        <span class="text-[11px] font-extrabold text-blue-700 uppercase tracking-wider">TOTAL A PAGAR</span>
+        <div class="text-4xl font-black text-slate-900 tracking-tight" id="pl-amount-display">$0.00 MXN</div>
+        <p class="text-xs font-bold text-slate-600" id="pl-client-display">Cliente: -</p>
+      </div>
+
+      <!-- Desglose de conceptos -->
+      <div class="space-y-1.5">
+        <span class="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Conceptos de la orden</span>
+        <div id="pl-items-list" class="bg-slate-50 border border-slate-200 rounded-xl p-3 max-h-36 overflow-y-auto space-y-1.5 text-xs font-semibold text-slate-700"></div>
+      </div>
+
+      <!-- Selección de método en pasarela -->
+      <div class="space-y-2">
+        <span class="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Selecciona cómo deseas pagar</span>
+        <div class="grid grid-cols-2 gap-2">
+          <button type="button" id="tab-spei" onclick="selectGatewayMethod('SPEI')" class="border-2 border-emerald-600 bg-emerald-50 text-emerald-900 rounded-xl p-2.5 text-xs font-black flex flex-col items-center gap-1 cursor-pointer">
+            <span>🏦 Transferencia SPEI</span>
+            <span class="text-[10px] font-semibold text-emerald-700">Autorización inmediata</span>
+          </button>
+          <button type="button" id="tab-card" onclick="selectGatewayMethod('TARJETA')" class="border border-slate-200 bg-white text-slate-700 rounded-xl p-2.5 text-xs font-bold flex flex-col items-center gap-1 cursor-pointer">
+            <span>💳 Tarjeta Débito/Crédito</span>
+            <span class="text-[10px] font-medium text-slate-500">Visa / Mastercard</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Datos SPEI / CLABE Dinámica -->
+      <div id="box-spei" class="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-1.5 text-xs">
+        <div class="flex justify-between">
+          <span class="text-slate-500 font-semibold">Banco Receptor (STP):</span>
+          <span class="font-black text-slate-800">STP / SPEI Referenciado</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-slate-500 font-semibold">CLABE Única de Orden:</span>
+          <span class="font-mono font-bold text-slate-900" id="pl-clabe">646180157042891042</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-slate-500 font-semibold">Banco Origen (Demo/Real):</span>
+          <select id="pl-bank-select" class="bg-white border border-slate-300 rounded px-2 py-0.5 font-bold text-slate-800 text-xs">
+            <option value="BBVA MÉXICO">BBVA México</option>
+            <option value="BANORTE">Banorte</option>
+            <option value="SANTANDER">Santander</option>
+            <option value="CITIBANAMEX">Citibanamex</option>
+            <option value="HSBC">HSBC</option>
+            <option value="BANREGIO">Banregio</option>
+          </select>
+        </div>
+      </div>
+
+      <button type="button" id="btn-pay-now" onclick="confirmGatewayPayment()"
+              class="w-full bg-gradient-to-b from-emerald-500 to-emerald-700 hover:from-emerald-600 hover:to-emerald-800 text-white font-black text-base py-3.5 px-6 rounded-2xl shadow-lg transition flex items-center justify-center gap-2 uppercase tracking-wider cursor-pointer">
+        <span>🔒 AUTORIZAR Y ENVIAR PAGO</span>
+      </button>
+    </div>
+
+    <!-- Vista de éxito tras pagar -->
+    <div id="pl-paid-content" class="hidden p-8 text-center space-y-4">
+      <div class="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-3xl mx-auto font-black shadow-inner">✓</div>
+      <h2 class="text-xl font-black text-emerald-900 uppercase">¡Pago Autorizado con Éxito!</h2>
+      <p class="text-xs font-semibold text-slate-600">El Punto de Venta ha recibido la confirmación automática y tu ticket ha sido generado.</p>
+      <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 text-xs space-y-1 text-left font-semibold text-emerald-950">
+        <div class="flex justify-between"><span>Orden:</span><span id="pl-done-order" class="font-black"></span></div>
+        <div class="flex justify-between"><span>Clave de Rastreo / Aut:</span><span id="pl-done-ref" class="font-black"></span></div>
+        <div class="flex justify-between"><span>Estatus en Caja:</span><span class="text-emerald-700 font-black">AUTORIZADO AUTOMÁTICAMENTE</span></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const orderId = params.get("order") || "";
+    const STORAGE_KEY = "calebsys_pending_payment_links_v1";
+    const bc = (typeof BroadcastChannel !== "undefined") ? new BroadcastChannel("calebsys_payment_links") : null;
+    let selectedMethod = "SPEI";
+
+    function getOrders() {
+      try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); } catch (_) { return []; }
+    }
+    function saveOrders(list) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+    }
+
+    function selectGatewayMethod(m) {
+      selectedMethod = m;
+      document.getElementById("tab-spei").className = m === "SPEI"
+        ? "border-2 border-emerald-600 bg-emerald-50 text-emerald-900 rounded-xl p-2.5 text-xs font-black flex flex-col items-center gap-1 cursor-pointer"
+        : "border border-slate-200 bg-white text-slate-700 rounded-xl p-2.5 text-xs font-bold flex flex-col items-center gap-1 cursor-pointer";
+      document.getElementById("tab-card").className = m === "TARJETA"
+        ? "border-2 border-emerald-600 bg-emerald-50 text-emerald-900 rounded-xl p-2.5 text-xs font-black flex flex-col items-center gap-1 cursor-pointer"
+        : "border border-slate-200 bg-white text-slate-700 rounded-xl p-2.5 text-xs font-bold flex flex-col items-center gap-1 cursor-pointer";
+    }
+
+    function initPage() {
+      const orders = getOrders();
+      const ord = orders.find(o => o.orderId === orderId) || orders[orders.length - 1];
+      if (!ord) {
+        document.getElementById("pl-amount-display").textContent = "Orden no encontrada";
+        document.getElementById("btn-pay-now").disabled = true;
+        return;
+      }
+      document.getElementById("pl-order-badge").textContent = ord.orderId;
+      document.getElementById("pl-amount-display").textContent = "$" + Number(ord.amount || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " MXN";
+      document.getElementById("pl-client-display").textContent = "Cliente: " + (ord.clientName || "PÚBLICO EN GENERAL");
+      const itemsEl = document.getElementById("pl-items-list");
+      itemsEl.innerHTML = (ord.items || []).map(it =>
+        `<div class="flex justify-between"><span>${it.quantity}x ${it.description || it.sku}</span><span class="font-bold">$${Number(it.subtotal || (it.quantity * it.price) || 0).toFixed(2)}</span></div>`
+      ).join("");
+
+      if (ord.status === "PAID" || ord.status === "COMPLETED") {
+        showPaidState(ord);
+      }
+    }
+
+    function showPaidState(ord) {
+      document.getElementById("pl-active-content").classList.add("hidden");
+      document.getElementById("pl-paid-content").classList.remove("hidden");
+      document.getElementById("pl-done-order").textContent = ord.orderId;
+      document.getElementById("pl-done-ref").textContent = ord.authReference || "SPEI-OK";
+    }
+
+    function confirmGatewayPayment() {
+      const orders = getOrders();
+      const idx = orders.findIndex(o => o.orderId === orderId);
+      const targetIdx = idx >= 0 ? idx : (orders.length - 1);
+      if (targetIdx < 0) return;
+
+      const bank = document.getElementById("pl-bank-select")?.value || "BBVA MÉXICO";
+      const ref = (selectedMethod === "SPEI" ? "SPEI-" : "AUT-") + Math.floor(10000000 + Math.random() * 90000000);
+      orders[targetIdx].status = "PAID";
+      orders[targetIdx].paidAt = new Date().toISOString();
+      orders[targetIdx].authReference = ref;
+      orders[targetIdx].bankOrigin = bank;
+      saveOrders(orders);
+
+      if (bc) {
+        bc.postMessage({ type: "PAYMENT_LINK_PAID", orderId: orders[targetIdx].orderId, authReference: ref, bankOrigin: bank });
+      }
+      showPaidState(orders[targetIdx]);
+    }
+
+    initPage();
+  </script>
+</body>
+</html>

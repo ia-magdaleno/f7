@@ -1,0 +1,612 @@
+<!-- ============================================================
+     PAGE: DASHBOARD — Módulo Administración CALEBSYS
+     Conectado 100% a /api/dashboard/stats y /api/dashboard/activity
+     Arquitecto: Software-Architect / CALEBSYS v5.1A
+     ============================================================ -->
+
+<!-- ── CABECERA ────────────────────────────────────────────────────── -->
+<div class="page-header">
+  <div class="page-header-left">
+    <h1 class="page-title">Dashboard</h1>
+    <p class="page-subtitle" id="dash-subtitle">Resumen operativo en tiempo real</p>
+  </div>
+  <div class="page-header-actions" style="display:flex;align-items:center;gap:10px;">
+    <span class="badge badge-success" id="dash-status-badge">
+      <span class="dot"></span> Cargando…
+    </span>
+    <!-- M-1/M-2: Selector de sucursal — solo visible para ADMIN (dueño/gerente
+         general). "Todas las sucursales" = vista agregada del tenant completo
+         (nivel 1 del drill-down); cada sucursal individual = detalle de esa
+         sede (nivel 3). El desglose por sucursal (nivel 2) se muestra abajo,
+         en #by-sucursal-panel, cuando el scope activo es "ALL". -->
+    <select id="dash-sucursal-filter"
+            style="display:none;padding:5px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface);font-size:0.78rem;font-weight:600;cursor:pointer;color:var(--text-main);"
+            data-change="__safe" data-change-arg="loadDashboard">
+      <option value="ALL">Todas las sucursales</option>
+    </select>
+    <button data-click="__safe" data-click-arg="loadDashboard"
+            style="padding:6px 14px;border-radius:8px;border:1px solid var(--border);background:var(--surface);font-size:0.78rem;font-weight:600;cursor:pointer;color:var(--text-main);display:flex;align-items:center;gap:6px;">
+      <i class="fa-solid fa-rotate-right"></i> Actualizar
+    </button>
+  </div>
+</div>
+
+<!-- ── BREADCRUMB DE SCOPE (drill-down) — solo ADMIN, solo cuando está
+     viendo el detalle de UNA sucursal (nivel 3). Regresa al agregado
+     de todas las sucursales (nivel 1). ─────────────────────────────── -->
+<div id="dash-scope-breadcrumb" style="display:none;align-items:center;gap:10px;font-size:0.76rem;color:var(--text-muted);margin-bottom:14px;">
+  <button id="dash-scope-back" data-click="__safe" data-click-arg="dashBackToAll"
+          style="padding:4px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface);font-size:0.72rem;font-weight:700;cursor:pointer;color:var(--brand-400,#3b82f6);display:flex;align-items:center;gap:6px;">
+    <i class="fa-solid fa-arrow-left"></i> Todas las sucursales
+  </button>
+  <span>Viendo detalle de: <strong id="dash-scope-label" style="color:var(--text-main);">—</strong></span>
+</div>
+
+<!-- ── KPI GRID (6 tarjetas) ───────────────────────────────────────── -->
+<div class="kpi-grid" style="grid-template-columns:repeat(3,1fr);gap:16px;display:grid;margin-bottom:20px;">
+
+  <!-- KPI 1: Ventas Hoy — clic activa el drill-down (nivel 1→2) cuando el
+       scope activo es "todas las sucursales": baja al panel de desglose. -->
+  <div class="kpi-card" id="kpi-card-ventas" data-click="__safe" data-click-arg="dashDrillFromKpi" style="display:flex;align-items:center;gap:16px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px 20px;">
+    <div class="kpi-icon" style="background:rgba(59,130,246,0.12);color:#3b82f6;width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1.1rem;">
+      <i class="fa-solid fa-dollar-sign"></i>
+    </div>
+    <div style="flex:1;min-width:0;">
+      <div class="kpi-label" style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-bottom:4px;">Ventas Hoy</div>
+      <div class="kpi-value" id="kpi-ventas-hoy" style="font-size:1.4rem;font-weight:800;color:var(--text-main);font-family:'Plus Jakarta Sans',sans-serif;">
+        <i class="fa-solid fa-circle-notch fa-spin" style="font-size:14px;color:var(--brand-400);"></i>
+      </div>
+      <div class="kpi-trend" id="kpi-trend-ventas" style="font-size:0.72rem;margin-top:3px;color:var(--text-muted);">
+        <i class="fa-solid fa-circle-notch fa-spin" style="font-size:10px;"></i> Cargando…
+      </div>
+    </div>
+  </div>
+
+  <!-- KPI 2: Tickets -->
+  <div class="kpi-card" id="kpi-card-transacciones" data-click="__safe" data-click-arg="dashDrillFromKpi" style="display:flex;align-items:center;gap:16px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px 20px;">
+    <div class="kpi-icon" style="background:rgba(16,185,129,0.12);color:#10b981;width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1.1rem;">
+      <i class="fa-solid fa-receipt"></i>
+    </div>
+    <div style="flex:1;min-width:0;">
+      <div class="kpi-label" style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-bottom:4px;">Transacciones</div>
+      <div class="kpi-value" id="kpi-transacciones" style="font-size:1.4rem;font-weight:800;color:var(--text-main);font-family:'Plus Jakarta Sans',sans-serif;">
+        <i class="fa-solid fa-circle-notch fa-spin" style="font-size:14px;color:var(--brand-400);"></i>
+      </div>
+      <div class="kpi-trend" id="kpi-trend-trans" style="font-size:0.72rem;margin-top:3px;color:var(--text-muted);">
+        <i class="fa-solid fa-circle-notch fa-spin" style="font-size:10px;"></i> Cargando…
+      </div>
+    </div>
+  </div>
+
+  <!-- KPI 3: Ticket Promedio -->
+  <div class="kpi-card" style="display:flex;align-items:center;gap:16px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px 20px;">
+    <div class="kpi-icon" style="background:rgba(139,92,246,0.12);color:#8b5cf6;width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1.1rem;">
+      <i class="fa-solid fa-chart-line"></i>
+    </div>
+    <div style="flex:1;min-width:0;">
+      <div class="kpi-label" style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-bottom:4px;">Ticket Promedio</div>
+      <div class="kpi-value" id="kpi-ticket-prom" style="font-size:1.4rem;font-weight:800;color:var(--text-main);font-family:'Plus Jakarta Sans',sans-serif;">
+        <i class="fa-solid fa-circle-notch fa-spin" style="font-size:14px;color:var(--brand-400);"></i>
+      </div>
+      <div class="kpi-trend" id="kpi-trend-prom" style="font-size:0.72rem;margin-top:3px;color:var(--text-muted);">
+        <i class="fa-solid fa-circle-notch fa-spin" style="font-size:10px;"></i> Cargando…
+      </div>
+    </div>
+  </div>
+
+  <!-- KPI 4: CxC Total — clic activa el mismo drill-down (nivel 1→2) que
+       Ventas Hoy/Transacciones cuando el scope activo es "todas las sucursales". -->
+  <div class="kpi-card" id="kpi-card-cxc" data-click="__safe" data-click-arg="dashDrillFromKpi" style="display:flex;align-items:center;gap:16px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px 20px;">
+    <div class="kpi-icon" style="background:rgba(245,158,11,0.12);color:#f59e0b;width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1.1rem;">
+      <i class="fa-solid fa-file-invoice-dollar"></i>
+    </div>
+    <div style="flex:1;min-width:0;">
+      <div class="kpi-label" style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-bottom:4px;">CxC Pendiente</div>
+      <div class="kpi-value" id="kpi-cxc" style="font-size:1.4rem;font-weight:800;color:var(--text-main);font-family:'Plus Jakarta Sans',sans-serif;">
+        <i class="fa-solid fa-circle-notch fa-spin" style="font-size:14px;color:var(--brand-400);"></i>
+      </div>
+      <div class="kpi-trend" id="kpi-trend-cxc" style="font-size:0.72rem;margin-top:3px;color:var(--text-muted);">
+        <i class="fa-solid fa-circle-notch fa-spin" style="font-size:10px;"></i> Cargando…
+      </div>
+    </div>
+  </div>
+
+  <!-- KPI 5: Delta vs Ayer -->
+  <div class="kpi-card" style="display:flex;align-items:center;gap:16px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px 20px;">
+    <div class="kpi-icon" style="background:rgba(239,68,68,0.12);color:#ef4444;width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1.1rem;" id="kpi-delta-icon">
+      <i class="fa-solid fa-arrows-up-down"></i>
+    </div>
+    <div style="flex:1;min-width:0;">
+      <div class="kpi-label" style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-bottom:4px;">vs. Ayer</div>
+      <div class="kpi-value" id="kpi-delta" style="font-size:1.4rem;font-weight:800;color:var(--text-main);font-family:'Plus Jakarta Sans',sans-serif;">
+        <i class="fa-solid fa-circle-notch fa-spin" style="font-size:14px;color:var(--brand-400);"></i>
+      </div>
+      <div class="kpi-trend" id="kpi-trend-delta" style="font-size:0.72rem;margin-top:3px;color:var(--text-muted);">Comparativa diaria</div>
+    </div>
+  </div>
+
+  <!-- KPI 6: Top SKU del día -->
+  <div class="kpi-card" style="display:flex;align-items:center;gap:16px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px 20px;">
+    <div class="kpi-icon" style="background:rgba(20,184,166,0.12);color:#14b8a6;width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1.1rem;">
+      <i class="fa-solid fa-trophy"></i>
+    </div>
+    <div style="flex:1;min-width:0;">
+      <div class="kpi-label" style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-bottom:4px;">Top Producto</div>
+      <div class="kpi-value" id="kpi-top-sku" style="font-size:1rem;font-weight:800;color:var(--text-main);font-family:'Plus Jakarta Sans',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+        <i class="fa-solid fa-circle-notch fa-spin" style="font-size:14px;color:var(--brand-400);"></i>
+      </div>
+      <div class="kpi-trend" id="kpi-trend-sku" style="font-size:0.72rem;margin-top:3px;color:var(--text-muted);">
+        <i class="fa-solid fa-circle-notch fa-spin" style="font-size:10px;"></i> Cargando…
+      </div>
+    </div>
+  </div>
+
+</div>
+<!-- ── FIN KPI GRID ─────────────────────────────────────────────────── -->
+
+<!-- ── DESGLOSE POR SUCURSAL (nivel 2 del drill-down) — solo visible para
+     ADMIN cuando el scope activo es "todas las sucursales" (ALL). Cada fila
+     es clicable: lleva al detalle completo de esa sede (nivel 3). ────── -->
+<div id="by-sucursal-panel" class="card" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:20px;">
+  <div style="font-size:0.82rem;font-weight:700;color:var(--text-main);display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+    <i class="fa-solid fa-code-branch" style="color:#3b82f6;"></i> Ventas y CxC por Sucursal — Hoy
+    <span style="font-size:0.68rem;font-weight:500;color:var(--text-muted);margin-left:auto;">Clic en una sucursal para ver su detalle completo</span>
+  </div>
+  <div id="by-sucursal-list" style="display:flex;flex-direction:column;gap:8px;">
+    <div style="color:var(--text-muted);font-size:0.8rem;text-align:center;padding:16px 0;">
+      <i class="fa-solid fa-circle-notch fa-spin"></i> Cargando…
+    </div>
+  </div>
+</div>
+
+<!-- ── FILA CENTRAL: Gráfica + Top Productos ───────────────────────── -->
+<div style="display:grid;grid-template-columns:1fr 320px;gap:16px;margin-bottom:20px;">
+
+  <!-- Gráfica de barras — Ventas por hora hoy -->
+  <div class="card" style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <div>
+        <div style="font-size:0.82rem;font-weight:700;color:var(--text-main);display:flex;align-items:center;gap:8px;">
+          <i class="fa-solid fa-chart-bar" style="color:#3b82f6;"></i> Ventas por Hora — Hoy
+        </div>
+        <div style="font-size:0.72rem;color:var(--text-muted);margin-top:2px;">Actualizado al cargar la página</div>
+      </div>
+      <div id="chart-total-label" style="font-size:0.78rem;font-weight:600;color:var(--text-muted);background:var(--bg-app);padding:4px 10px;border-radius:8px;border:1px solid var(--border);">
+        Total: —
+      </div>
+    </div>
+    <!-- Canvas para gráfica de barras pura (sin dependencias externas) -->
+    <div id="hourly-chart-wrap" style="height:160px;display:flex;align-items:flex-end;gap:4px;overflow-x:auto;padding-bottom:4px;">
+      <!-- Las barras se generan por JS en loadDashboard -->
+      <div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:var(--text-muted);font-size:0.8rem;">
+        <i class="fa-solid fa-circle-notch fa-spin" style="margin-right:8px;"></i> Cargando gráfica…
+      </div>
+    </div>
+  </div>
+
+  <!-- Top Productos del Día -->
+  <div class="card" style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;">
+    <div style="font-size:0.82rem;font-weight:700;color:var(--text-main);display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+      <i class="fa-solid fa-star" style="color:#f59e0b;"></i> Top Productos Hoy
+    </div>
+    <div id="top-products-list" style="display:flex;flex-direction:column;gap:10px;">
+      <div style="color:var(--text-muted);font-size:0.8rem;text-align:center;padding:20px 0;">
+        <i class="fa-solid fa-circle-notch fa-spin"></i> Cargando…
+      </div>
+    </div>
+  </div>
+
+</div>
+<!-- ── FIN FILA CENTRAL ─────────────────────────────────────────────── -->
+
+<!-- ── FILA INFERIOR: Últimas Ventas + Actividad + Acceso Rápido ────── -->
+<div style="display:grid;grid-template-columns:1fr 1fr 280px;gap:16px;margin-bottom:20px;">
+
+  <!-- Últimas Ventas del Día -->
+  <div class="card" style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;">
+    <div style="font-size:0.82rem;font-weight:700;color:var(--text-main);display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+      <i class="fa-solid fa-clock-rotate-left" style="color:#10b981;"></i> Últimas Ventas
+    </div>
+    <div id="recent-sales-table" style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:0.78rem;">
+        <thead>
+          <tr>
+            <th style="text-align:left;padding:6px 8px;color:var(--text-muted);font-weight:700;font-size:0.68rem;text-transform:uppercase;border-bottom:1px solid var(--border);">ID Venta</th>
+            <th style="text-align:left;padding:6px 8px;color:var(--text-muted);font-weight:700;font-size:0.68rem;text-transform:uppercase;border-bottom:1px solid var(--border);">Método</th>
+            <th style="text-align:right;padding:6px 8px;color:var(--text-muted);font-weight:700;font-size:0.68rem;text-transform:uppercase;border-bottom:1px solid var(--border);">Total</th>
+            <th style="text-align:right;padding:6px 8px;color:var(--text-muted);font-weight:700;font-size:0.68rem;text-transform:uppercase;border-bottom:1px solid var(--border);">Hora</th>
+          </tr>
+        </thead>
+        <tbody id="recent-sales-body">
+          <tr><td colspan="4" style="padding:20px;text-align:center;color:var(--text-muted);">
+            <i class="fa-solid fa-circle-notch fa-spin"></i> Cargando…
+          </td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Feed de Actividad Reciente -->
+  <div class="card" style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;">
+    <div style="font-size:0.82rem;font-weight:700;color:var(--text-main);display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+      <i class="fa-solid fa-bolt" style="color:#8b5cf6;"></i> Actividad Reciente
+    </div>
+    <div id="activity-feed" style="display:flex;flex-direction:column;gap:8px;max-height:220px;overflow-y:auto;">
+      <div style="color:var(--text-muted);font-size:0.8rem;text-align:center;padding:20px 0;">
+        <i class="fa-solid fa-circle-notch fa-spin"></i> Cargando actividad…
+      </div>
+    </div>
+  </div>
+
+  <!-- Acceso Rápido a Módulos -->
+  <div class="card" style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;">
+    <div style="font-size:0.82rem;font-weight:700;color:var(--text-main);display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+      <i class="fa-solid fa-grid-2" style="color:#3b82f6;"></i> Acceso Rápido
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <button data-click="navigateTo" data-click-arg="productos" class="dash-quick-btn" style="padding:10px 6px;border-radius:10px;border:1px solid var(--border);background:var(--bg-app);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;transition:all .15s;">
+        <i class="fa-solid fa-tag" style="font-size:1rem;color:#3b82f6;"></i>
+        <span style="font-size:0.68rem;font-weight:600;color:var(--text-muted);">Productos</span>
+      </button>
+      <button data-click="navigateTo" data-click-arg="clientes" class="dash-quick-btn" style="padding:10px 6px;border-radius:10px;border:1px solid var(--border);background:var(--bg-app);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;transition:all .15s;">
+        <i class="fa-solid fa-address-book" style="font-size:1rem;color:#f59e0b;"></i>
+        <span style="font-size:0.68rem;font-weight:600;color:var(--text-muted);">Clientes</span>
+      </button>
+      <button data-click="navigateTo" data-click-arg="kardex" class="dash-quick-btn" style="padding:10px 6px;border-radius:10px;border:1px solid var(--border);background:var(--bg-app);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;transition:all .15s;">
+        <i class="fa-solid fa-list-ul" style="font-size:1rem;color:#14b8a6;"></i>
+        <span style="font-size:0.68rem;font-weight:600;color:var(--text-muted);">Kardex</span>
+      </button>
+      <button data-click="navigateTo" data-click-arg="cuentas_cobrar" class="dash-quick-btn" style="padding:10px 6px;border-radius:10px;border:1px solid var(--border);background:var(--bg-app);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;transition:all .15s;">
+        <i class="fa-solid fa-file-invoice-dollar" style="font-size:1rem;color:#8b5cf6;"></i>
+        <span style="font-size:0.68rem;font-weight:600;color:var(--text-muted);">CxC</span>
+      </button>
+      <button data-click="navigateTo" data-click-arg="traspasos" class="dash-quick-btn" style="padding:10px 6px;border-radius:10px;border:1px solid var(--border);background:var(--bg-app);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;transition:all .15s;">
+        <i class="fa-solid fa-arrow-right-arrow-left" style="font-size:1rem;color:#10b981;"></i>
+        <span style="font-size:0.68rem;font-weight:600;color:var(--text-muted);">Traspasos</span>
+      </button>
+      <button data-click="navigateTo" data-click-arg="auditoria" class="dash-quick-btn" style="padding:10px 6px;border-radius:10px;border:1px solid var(--border);background:var(--bg-app);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;transition:all .15s;">
+        <i class="fa-solid fa-shield-halved" style="font-size:1rem;color:#ef4444;"></i>
+        <span style="font-size:0.68rem;font-weight:600;color:var(--text-muted);">Auditoría</span>
+      </button>
+    </div>
+  </div>
+
+</div>
+<!-- ── FIN FILA INFERIOR ─────────────────────────────────────────────── -->
+
+<!-- ══ GRID DE MÓDULOS DEL SISTEMA ═══════════════════════════════════ -->
+<div style="margin:24px 0 8px;">
+  <div style="font-size:0.7rem;font-weight:900;text-transform:uppercase;letter-spacing:.12em;
+              color:var(--text-muted);margin-bottom:14px;display:flex;align-items:center;gap:10px;">
+    <i class="fa-solid fa-grid-2" style="color:var(--brand-400);"></i>
+    Módulos del Sistema
+    <div style="flex:1;height:1px;background:var(--border);"></div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;">
+
+    <!-- 1. Administración -->
+    <div data-click="navigateTo" data-click-arg="usuarios" class="dash-mod-card"
+         style="background:var(--surface);border:1px solid var(--border);border-radius:14px;
+                padding:16px 14px;cursor:pointer;transition:all .18s;display:flex;flex-direction:column;gap:10px;">
+      <div style="width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#1d4ed8,#3b82f6);
+                  display:flex;align-items:center;justify-content:center;">
+        <i class="fa-solid fa-shield-halved" style="color:#fff;font-size:.95rem;"></i>
+      </div>
+      <div>
+        <div style="font-size:.78rem;font-weight:800;color:var(--text-main);">Administración</div>
+        <div style="font-size:.65rem;color:var(--text-muted);margin-top:2px;">Usuarios, roles y auditoría</div>
+      </div>
+      <span style="font-size:.6rem;font-weight:800;padding:2px 8px;border-radius:20px;
+                   background:rgba(16,185,129,.12);color:#10b981;display:inline-block;width:fit-content;">Activo</span>
+    </div>
+
+    <!-- 2. Ventas / POS -->
+    <div data-click="__navHref" data-click-arg="/" class="dash-mod-card"
+         style="background:var(--surface);border:1px solid var(--border);border-radius:14px;
+                padding:16px 14px;cursor:pointer;transition:all .18s;display:flex;flex-direction:column;gap:10px;">
+      <div style="width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#065f46,#10b981);
+                  display:flex;align-items:center;justify-content:center;">
+        <i class="fa-solid fa-cash-register" style="color:#fff;font-size:.95rem;"></i>
+      </div>
+      <div>
+        <div style="font-size:.78rem;font-weight:800;color:var(--text-main);">Ventas POS</div>
+        <div style="font-size:.65rem;color:var(--text-muted);margin-top:2px;">Punto de venta y cobros</div>
+      </div>
+      <span style="font-size:.6rem;font-weight:800;padding:2px 8px;border-radius:20px;
+                   background:rgba(16,185,129,.12);color:#10b981;display:inline-block;width:fit-content;">Activo</span>
+    </div>
+
+    <!-- 3. Almacén -->
+    <div data-click="navigateTo" data-click-arg="inventario" class="dash-mod-card"
+         style="background:var(--surface);border:1px solid var(--border);border-radius:14px;
+                padding:16px 14px;cursor:pointer;transition:all .18s;display:flex;flex-direction:column;gap:10px;">
+      <div style="width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#5b21b6,#8b5cf6);
+                  display:flex;align-items:center;justify-content:center;">
+        <i class="fa-solid fa-boxes-stacked" style="color:#fff;font-size:.95rem;"></i>
+      </div>
+      <div>
+        <div style="font-size:.78rem;font-weight:800;color:var(--text-main);">Almacén</div>
+        <div style="font-size:.65rem;color:var(--text-muted);margin-top:2px;">Kardex, inventario y traslados</div>
+      </div>
+      <span style="font-size:.6rem;font-weight:800;padding:2px 8px;border-radius:20px;
+                   background:rgba(16,185,129,.12);color:#10b981;display:inline-block;width:fit-content;">Activo</span>
+    </div>
+
+    <!-- 4. Compras -->
+    <div data-click="navigateTo" data-click-arg="proveedores" class="dash-mod-card"
+         style="background:var(--surface);border:1px solid var(--border);border-radius:14px;
+                padding:16px 14px;cursor:pointer;transition:all .18s;display:flex;flex-direction:column;gap:10px;">
+      <div style="width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#92400e,#f59e0b);
+                  display:flex;align-items:center;justify-content:center;">
+        <i class="fa-solid fa-truck-ramp-box" style="color:#fff;font-size:.95rem;"></i>
+      </div>
+      <div>
+        <div style="font-size:.78rem;font-weight:800;color:var(--text-main);">Compras</div>
+        <div style="font-size:.65rem;color:var(--text-muted);margin-top:2px;">Proveedores, OC y recepciones</div>
+      </div>
+      <span style="font-size:.6rem;font-weight:800;padding:2px 8px;border-radius:20px;
+                   background:rgba(16,185,129,.12);color:#10b981;display:inline-block;width:fit-content;">Activo</span>
+    </div>
+
+    <!-- 5. Cartera -->
+    <div data-click="navigateTo" data-click-arg="cxc" class="dash-mod-card"
+         style="background:var(--surface);border:1px solid var(--border);border-radius:14px;
+                padding:16px 14px;cursor:pointer;transition:all .18s;display:flex;flex-direction:column;gap:10px;">
+      <div style="width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#134e4a,#14b8a6);
+                  display:flex;align-items:center;justify-content:center;">
+        <i class="fa-solid fa-wallet" style="color:#fff;font-size:.95rem;"></i>
+      </div>
+      <div>
+        <div style="font-size:.78rem;font-weight:800;color:var(--text-main);">Cartera</div>
+        <div style="font-size:.65rem;color:var(--text-muted);margin-top:2px;">CxC, crédito y cobranza</div>
+      </div>
+      <span style="font-size:.6rem;font-weight:800;padding:2px 8px;border-radius:20px;
+                   background:rgba(16,185,129,.12);color:#10b981;display:inline-block;width:fit-content;">Activo</span>
+    </div>
+
+    <!-- 6. GPS Envíos (próximamente) -->
+    <div class="dash-mod-card" title="Módulo en desarrollo"
+         style="background:var(--surface);border:1px solid var(--border);border-radius:14px;
+                padding:16px 14px;opacity:.5;cursor:not-allowed;transition:all .18s;display:flex;flex-direction:column;gap:10px;">
+      <div style="width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#374151,#6b7280);
+                  display:flex;align-items:center;justify-content:center;">
+        <i class="fa-solid fa-map-location-dot" style="color:#fff;font-size:.95rem;"></i>
+      </div>
+      <div>
+        <div style="font-size:.78rem;font-weight:800;color:var(--text-main);">GPS Envíos</div>
+        <div style="font-size:.65rem;color:var(--text-muted);margin-top:2px;">Rutas de reparto y entregas</div>
+      </div>
+      <span style="font-size:.6rem;font-weight:800;padding:2px 8px;border-radius:20px;
+                   background:rgba(107,114,128,.15);color:#9ca3af;display:inline-block;width:fit-content;">
+        <i class="fa-solid fa-clock"></i> Pronto
+      </span>
+    </div>
+
+    <!-- 7. Community / Redes Sociales (próximamente) -->
+    <div class="dash-mod-card" title="Módulo en desarrollo"
+         style="background:var(--surface);border:1px solid var(--border);border-radius:14px;
+                padding:16px 14px;opacity:.5;cursor:not-allowed;transition:all .18s;display:flex;flex-direction:column;gap:10px;">
+      <div style="width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#374151,#6b7280);
+                  display:flex;align-items:center;justify-content:center;">
+        <i class="fa-solid fa-share-nodes" style="color:#fff;font-size:.95rem;"></i>
+      </div>
+      <div>
+        <div style="font-size:.78rem;font-weight:800;color:var(--text-main);">Community</div>
+        <div style="font-size:.65rem;color:var(--text-muted);margin-top:2px;">Redes sociales y pedidos online</div>
+      </div>
+      <span style="font-size:.6rem;font-weight:800;padding:2px 8px;border-radius:20px;
+                   background:rgba(107,114,128,.15);color:#9ca3af;display:inline-block;width:fit-content;">
+        <i class="fa-solid fa-clock"></i> Pronto
+      </span>
+    </div>
+
+    <!-- 8. Contabilidad (próximamente) -->
+    <div class="dash-mod-card" title="Módulo en desarrollo"
+         style="background:var(--surface);border:1px solid var(--border);border-radius:14px;
+                padding:16px 14px;opacity:.5;cursor:not-allowed;transition:all .18s;display:flex;flex-direction:column;gap:10px;">
+      <div style="width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#374151,#6b7280);
+                  display:flex;align-items:center;justify-content:center;">
+        <i class="fa-solid fa-book-open" style="color:#fff;font-size:.95rem;"></i>
+      </div>
+      <div>
+        <div style="font-size:.78rem;font-weight:800;color:var(--text-main);">Contabilidad</div>
+        <div style="font-size:.65rem;color:var(--text-muted);margin-top:2px;">Módulo contable y fiscal</div>
+      </div>
+      <span style="font-size:.6rem;font-weight:800;padding:2px 8px;border-radius:20px;
+                   background:rgba(107,114,128,.15);color:#9ca3af;display:inline-block;width:fit-content;">
+        <i class="fa-solid fa-clock"></i> Pronto
+      </span>
+    </div>
+
+    <!-- 9. MAGDO AI -->
+    <div data-click="navigateTo" data-click-arg="magdo-ai" class="dash-mod-card"
+         style="background:var(--surface);border:1px solid var(--border);border-radius:14px;
+                padding:16px 14px;cursor:pointer;transition:all .18s;display:flex;flex-direction:column;gap:10px;">
+      <div style="width:38px;height:38px;border-radius:10px;
+                  background:linear-gradient(135deg,#1e3a8a,#6366f1);
+                  display:flex;align-items:center;justify-content:center;">
+        <i class="fa-solid fa-robot" style="color:#fff;font-size:.95rem;"></i>
+      </div>
+      <div>
+        <div style="font-size:.78rem;font-weight:800;color:var(--text-main);">MAGDO AI</div>
+        <div style="font-size:.65rem;color:var(--text-muted);margin-top:2px;">Chatbot agente inteligente</div>
+      </div>
+      <span style="font-size:.6rem;font-weight:800;padding:2px 8px;border-radius:20px;
+                   background:rgba(99,102,241,.15);color:#818cf8;display:inline-block;width:fit-content;">Beta</span>
+    </div>
+
+    <!-- 10. Configuración -->
+    <div data-click="navigateTo" data-click-arg="config" class="dash-mod-card"
+         style="background:var(--surface);border:1px solid var(--border);border-radius:14px;
+                padding:16px 14px;cursor:pointer;transition:all .18s;display:flex;flex-direction:column;gap:10px;">
+      <div style="width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#1e293b,#475569);
+                  display:flex;align-items:center;justify-content:center;">
+        <i class="fa-solid fa-sliders" style="color:#fff;font-size:.95rem;"></i>
+      </div>
+      <div>
+        <div style="font-size:.78rem;font-weight:800;color:var(--text-main);">Configuración</div>
+        <div style="font-size:.65rem;color:var(--text-muted);margin-top:2px;">Empresa, sucursales e impresoras</div>
+      </div>
+      <span style="font-size:.6rem;font-weight:800;padding:2px 8px;border-radius:20px;
+                   background:rgba(16,185,129,.12);color:#10b981;display:inline-block;width:fit-content;">Activo</span>
+    </div>
+
+  </div>
+</div>
+<!-- ══ FIN GRID MÓDULOS ════════════════════════════════════════════════ -->
+
+<!-- ── BARRA DE ESTADO INFERIOR (dialecto DB + timestamp) ────────────── -->
+<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0 4px;border-top:1px solid var(--border);margin-top:4px;">
+  <span id="dash-dialect-badge" style="font-size:0.68rem;color:var(--text-muted);display:flex;align-items:center;gap:6px;">
+    <i class="fa-solid fa-database"></i> Dialecto: —
+  </span>
+  <span id="dash-last-updated" style="font-size:0.68rem;color:var(--text-muted);">
+    <i class="fa-solid fa-clock"></i> Sin actualizar
+  </span>
+</div>
+
+<!-- ── ESTILOS INTERNOS del dashboard (aislados, no afectan shell) ────── -->
+<style>
+  /* Hover en botones de acceso rápido */
+  .dash-quick-btn:hover {
+    border-color: var(--brand-400) !important;
+    background: rgba(59,130,246,0.06) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(59,130,246,0.1);
+  }
+  /* Barras de la gráfica horaria */
+  .dash-bar-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    flex: 1;
+    min-width: 22px;
+    max-width: 40px;
+    height: 100%;
+    justify-content: flex-end;
+  }
+  .dash-bar-fill {
+    width: 100%;
+    border-radius: 4px 4px 0 0;
+    background: linear-gradient(180deg, #3b82f6 0%, #6366f1 100%);
+    transition: height 0.4s ease;
+    min-height: 4px;
+  }
+  .dash-bar-fill.zero {
+    background: var(--border);
+    opacity: 0.4;
+  }
+  .dash-bar-label {
+    font-size: 0.58rem;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+  /* Fila de actividad */
+  .activity-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .activity-row:last-child { border-bottom: none; }
+  .activity-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    margin-top: 5px;
+    flex-shrink: 0;
+  }
+  .activity-dot.sale   { background: #10b981; }
+  .activity-dot.audit  { background: #8b5cf6; }
+  .activity-dot.warn   { background: #f59e0b; }
+  .activity-dot.crit   { background: #ef4444; }
+  .activity-text {
+    flex: 1;
+    font-size: 0.76rem;
+    color: var(--text-main);
+    font-weight: 500;
+    line-height: 1.4;
+  }
+  .activity-time {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    flex-shrink: 0;
+  }
+  /* Top producto fila */
+  .top-prod-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 0;
+  }
+  .top-prod-rank {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: var(--bg-app);
+    border: 1px solid var(--border);
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .top-prod-rank.gold   { background:#fef9c3; border-color:#fde047; color:#a16207; }
+  .top-prod-rank.silver { background:#f1f5f9; border-color:#cbd5e1; color:#475569; }
+  .top-prod-rank.bronze { background:#fef3c7; border-color:#fcd34d; color:#92400e; }
+  /* Fila de sucursal en el panel de desglose (drill-down nivel 2) */
+  .by-suc-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--bg-app);
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .by-suc-row:hover {
+    border-color: var(--brand-400, #3b82f6);
+    background: rgba(59,130,246,0.06);
+    transform: translateX(2px);
+  }
+  .by-suc-bar-track {
+    flex: 1;
+    height: 8px;
+    border-radius: 4px;
+    background: var(--border);
+    overflow: hidden;
+  }
+  .by-suc-bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    background: linear-gradient(90deg, #3b82f6, #6366f1);
+  }
+  /* Pulso de atención cuando el KPI dirige al panel de desglose */
+  @keyframes dashPanelPulse {
+    0%   { box-shadow: 0 0 0 0 rgba(59,130,246,0.45); }
+    70%  { box-shadow: 0 0 0 10px rgba(59,130,246,0); }
+    100% { box-shadow: 0 0 0 0 rgba(59,130,246,0); }
+  }
+  .dash-panel-pulse { animation: dashPanelPulse 0.9s ease-out 2; }
+  #kpi-card-ventas, #kpi-card-transacciones, #kpi-card-cxc { transition: box-shadow .15s, border-color .15s; }
+  #kpi-card-ventas.dash-kpi-clickable, #kpi-card-transacciones.dash-kpi-clickable, #kpi-card-cxc.dash-kpi-clickable { cursor: pointer; }
+  #kpi-card-ventas.dash-kpi-clickable:hover, #kpi-card-transacciones.dash-kpi-clickable:hover, #kpi-card-cxc.dash-kpi-clickable:hover {
+    border-color: var(--brand-400, #3b82f6);
+  }
+  /* Método pago badge */
+  .pay-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 8px; border-radius: 12px;
+    font-size: 0.65rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .3px;
+  }
+  .pay-badge.efectivo  { background:#dcfce7; color:#15803d; }
+  .pay-badge.tarjeta   { background:#dbeafe; color:#1d4ed8; }
+  .pay-badge.transferencia { background:#f3e8ff; color:#7e22ce; }
+  .pay-badge.credito   { background:#fef9c3; color:#a16207; }
+  .pay-badge.otros     { background:#f1f5f9; color:#475569; }
+</style>
+<!-- ── FIN DASHBOARD HTML ─────────────────────────────────────────────── -->
